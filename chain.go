@@ -16,11 +16,12 @@ type Link[T any] struct {
 type Chain[T any] struct {
 	tail   *Link[T]
 	head   *Link[T]
+	Mark   *Link[T]
 	Length int
 	mu     *sync.RWMutex
 }
 
-// You can initialize now Chain struct using this
+// You can initialize new Chain struct using this
 func New[T any]() *Chain[T] {
 	Chain := &Chain[T]{}
 	Chain.Length = 0
@@ -147,6 +148,43 @@ func (Chain *Chain[T]) Merge(exChain *Chain[T]) *Chain[T] {
 		Chain.Length += exChain.Length
 	}
 	return Chain
+}
+
+// Retreive the head pointer beware if it's empty
+func (Chain *Chain[T]) Head() *Link[T] {
+	return Chain.head
+}
+
+// Retreive the tail pointer beware if it's empty
+func (Chain *Chain[T]) Tail() *Link[T] {
+	return Chain.tail
+}
+
+// You mark a pointer and then retrive it's value
+// default to the Tail
+func (Chain *Chain[T]) Here() *Link[T] {
+	if Chain.Mark == nil {
+		Chain.Mark = Chain.tail
+	}
+	return Chain.Mark
+}
+
+// You move the mark Up towards the head one level
+// Then retrieve it's value
+func (Chain *Chain[T]) Up() *Link[T] {
+	if Chain.Mark == nil {
+		Chain.Mark = Chain.Mark.front
+	}
+	return Chain.Mark
+}
+
+// You move the mark Down towards the tail one level
+// Then retrieve it's value
+func (Chain *Chain[T]) Down() *Link[T] {
+	if Chain.Mark == nil {
+		Chain.Mark = Chain.Mark.next
+	}
+	return Chain.Mark
 }
 
 // Lock for concurrency reasons, use whatever you like

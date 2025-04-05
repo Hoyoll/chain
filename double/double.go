@@ -1,15 +1,31 @@
-package chain
+package double
 
 import (
 	"fmt"
-	"sync"
+)
+
+const (
+	TAIL = -1
+	HEAD = 0
 )
 
 // The individual Links
 type Link[T any] struct {
 	Item  T
-	next  *Link[T]
-	front *Link[T]
+	Next  *Link[T]
+	Front *Link[T]
+}
+
+func (link *Link[T]) Delete() {
+	link.Detach()
+	link = nil
+}
+
+// Removing oneself from the queue
+// whilst maintaining it's structure
+func (link *Link[T]) Detach() {
+	link.Front.Next = link.Next
+	link.Next.Front = link.Front
 }
 
 // We keep track of the pointer here
@@ -18,7 +34,6 @@ type Chain[T any] struct {
 	head   *Link[T]
 	Mark   *Link[T]
 	Length int
-	mu     *sync.RWMutex
 }
 
 // You can initialize new Chain struct using this
@@ -46,7 +61,7 @@ func (Chain Chain[T]) Last() (T, error) {
 	return Chain.tail.Item, nil
 }
 
-// Push is adding element to the end
+// Push is adding element to the back
 func (Chain *Chain[T]) Push(item T) *Chain[T] {
 	new := &Link[T]{
 		Item: item,
@@ -55,15 +70,15 @@ func (Chain *Chain[T]) Push(item T) *Chain[T] {
 		Chain.head = new
 		Chain.tail = new
 	} else {
-		Chain.tail.next = new
-		new.front = Chain.tail
+		Chain.tail.Next = new
+		new.Front = Chain.tail
 		Chain.tail = new
 	}
 	Chain.Length++
 	return Chain
 }
 
-// front is appending element to the start
+// Front is appending element to well, Front
 func (Chain *Chain[T]) Front(item T) *Chain[T] {
 	new := &Link[T]{
 		Item: item,
@@ -72,8 +87,8 @@ func (Chain *Chain[T]) Front(item T) *Chain[T] {
 		Chain.head = new
 		Chain.tail = new
 	} else {
-		Chain.head.front = new
-		new.next = Chain.head
+		Chain.head.Front = new
+		new.Next = Chain.head
 		Chain.head = new
 	}
 	Chain.Length++
@@ -88,7 +103,7 @@ func (Chain *Chain[T]) Iter(process func(*Link[T]) bool) {
 	}
 	var recur func(*Link[T])
 	recur = func(Link *Link[T]) {
-		if Link.next == nil {
+		if Link.Next == nil {
 			process(Link)
 			return
 		}
@@ -96,7 +111,7 @@ func (Chain *Chain[T]) Iter(process func(*Link[T]) bool) {
 		if !process(Link) {
 			return
 		}
-		recur(Link.next)
+		recur(Link.Next)
 	}
 	recur(Chain.head)
 }
@@ -109,14 +124,14 @@ func (Chain *Chain[T]) Reti(process func(*Link[T]) bool) {
 	}
 	var recur func(*Link[T])
 	recur = func(Link *Link[T]) {
-		if Link.front == nil {
+		if Link.Front == nil {
 			process(Link)
 			return
 		}
 		if !process(Link) {
 			return
 		}
-		recur(Link.front)
+		recur(Link.Front)
 	}
 	recur(Chain.tail)
 }
@@ -126,8 +141,10 @@ func (Chain *Chain[T]) Pop() {
 	if Chain.tail == nil {
 		return
 	}
-	Chain.tail = Chain.tail.front
-	Chain.tail.next = nil
+	Chain.tail = Chain.tail.Front
+	Chain.tail.Next = nil
+
+	Chain.Length--
 }
 
 // Removing the first element in the Chain
@@ -135,78 +152,85 @@ func (Chain *Chain[T]) Cut() {
 	if Chain.head == nil {
 		return
 	}
-	Chain.head = Chain.head.next
-	Chain.head.front = nil
+	Chain.head = Chain.head.Next
+	Chain.head.Front = nil
+	Chain.Length--
 }
 
-// If you have two chain, you chain them
+// If you have two chain, you can chain them
+// DO NOT TRY TO MERGE WITH THE SAME CHAIN TWICE
+// Ie doing this:
+// Chain.Merge(other)
+// Chain.Merge(other)
+// IS A BAD IDEA!
 func (Chain *Chain[T]) Merge(exChain *Chain[T]) *Chain[T] {
-	if exChain.head != nil {
-		exChain.head.front = Chain.tail
-		Chain.tail.next = exChain.head
-		Chain.tail = exChain.tail
-		Chain.Length += exChain.Length
-	}
+	exChain.head.Front = Chain.tail
+	Chain.tail.Next = exChain.head
+	Chain.tail = exChain.tail
+	Chain.Length += exChain.Length
 	return Chain
 }
 
-// Retreive the head pointer beware if it's empty
+// Retrieve the head pointer beware if it's nil
 func (Chain *Chain[T]) Head() *Link[T] {
 	return Chain.head
 }
 
-// Retreive the tail pointer beware if it's empty
+// Retrieve the tail pointer beware if it's nil
 func (Chain *Chain[T]) Tail() *Link[T] {
 	return Chain.tail
 }
 
 // You mark a pointer and then retrive it's value
 // default to the Tail
-func (Chain *Chain[T]) Here() *Link[T] {
-	if Chain.Mark == nil {
+func (Chain *Chain[T]) Point(i int) *Link[T] {
+	switch i {
+	case HEAD:
+		Chain.Mark = Chain.head
+	case TAIL:
 		Chain.Mark = Chain.tail
+	default:
+		count := 0
+		Chain.Iter(func(chain *Link[T]) bool {
+			Chain.Mark = chain
+			count++
+			return count != i
+		})
 	}
 	return Chain.Mark
 }
 
 // You move the mark Up towards the head one level
-// Then retrieve it's value
+// Then retrieve it's pointer
+// You need to to
 func (Chain *Chain[T]) Up() *Link[T] {
-	if Chain.Mark == nil {
-		Chain.Mark = Chain.Mark.front
+	if Chain.Mark != nil {
+		Chain.Point(0)
 	}
+	Chain.Mark = Chain.Mark.Front
 	return Chain.Mark
 }
 
 // You move the mark Down towards the tail one level
-// Then retrieve it's value
+// Then retrieve it's pointer
 func (Chain *Chain[T]) Down() *Link[T] {
-	if Chain.Mark == nil {
-		Chain.Mark = Chain.Mark.next
+	if Chain.Mark != nil {
+		Chain.Point(0)
 	}
+	Chain.Mark = Chain.Mark.Next
 	return Chain.Mark
 }
 
-// Lock for concurrency reasons, use whatever you like
-func (Chain *Chain[T]) Lock() *Chain[T] {
-	Chain.mu.Lock()
-	return Chain
-}
-
-// Lock for concurrency reasons, use whatever you like
-func (Chain *Chain[T]) Unlock() *Chain[T] {
-	Chain.mu.Unlock()
-	return Chain
-}
-
-// Lock for concurrency reasons, use whatever you like
-func (Chain *Chain[T]) RLock() *Chain[T] {
-	Chain.mu.RLock()
-	return Chain
-}
-
-// Lock for concurrency reasons, use whatever you like
-func (Chain *Chain[T]) RUnlock() *Chain[T] {
-	Chain.mu.RUnlock()
-	return Chain
+func (Chain *Chain[T]) Clear() {
+	var recur func(*Link[T])
+	recur = func(Link *Link[T]) {
+		if Link.Next == nil {
+			Link = nil
+			return
+		}
+		tmp := Link.Next
+		Link = nil
+		recur(tmp)
+	}
+	recur(Chain.head)
 }

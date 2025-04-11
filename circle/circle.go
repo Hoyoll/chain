@@ -1,5 +1,7 @@
 package circle
 
+import "github.com/Hoyoll/chain/double"
+
 // The individual Links
 type Link[T any] struct {
 	Item  T
@@ -115,6 +117,46 @@ func (Chain *Chain[T]) Reti(process func(*Link[T]) bool) {
 		recur(Link.Front)
 	}
 	recur(Chain.tail)
+}
+
+// You mark a pointer and then retrive it's value
+// default to the Tail
+func (Chain *Chain[T]) Point(i int) *Link[T] {
+	switch i {
+	case double.HEAD:
+		Chain.Mark = Chain.head
+	case double.TAIL:
+		Chain.Mark = Chain.tail
+	default:
+		count := 0
+		Chain.Iter(func(chain *Link[T]) bool {
+			Chain.Mark = chain
+			count++
+			return count != i
+		})
+	}
+	return Chain.Mark
+}
+
+// You move the mark Up towards the head one level
+// Then retrieve it's pointer
+// You need to to
+func (Chain *Chain[T]) Up() *Link[T] {
+	if Chain.Mark != nil {
+		Chain.Point(0)
+	}
+	Chain.Mark = Chain.Mark.Front
+	return Chain.Mark
+}
+
+// You move the mark Down towards the tail one level
+// Then retrieve it's pointer
+func (Chain *Chain[T]) Down() *Link[T] {
+	if Chain.Mark != nil {
+		Chain.Point(0)
+	}
+	Chain.Mark = Chain.Mark.Next
+	return Chain.Mark
 }
 
 // Removing the last element in the Chain

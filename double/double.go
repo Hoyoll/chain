@@ -171,6 +171,13 @@ func (Chain *Chain[T]) Merge(exChain *Chain[T]) *Chain[T] {
 	return Chain
 }
 
+func (Chain *Chain[T]) Attach(link *Link[T]) {
+	Chain.tail.Next = link
+	link.Front = Chain.tail
+	Chain.tail = link
+	Chain.Length++
+}
+
 // Retrieve the head pointer beware if it's nil
 func (Chain *Chain[T]) Head() *Link[T] {
 	return Chain.head

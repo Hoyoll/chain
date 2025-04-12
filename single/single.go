@@ -1,11 +1,5 @@
 package single
 
-const (
-	placeholder = iota
-	TAIL
-	HEAD
-)
-
 // The individual Links
 type Link[T any] struct {
 	Item T
@@ -63,7 +57,7 @@ func (Chain *Chain[T]) Cut() {
 	}
 	var temp *Link[T]
 	temp = Chain.head
-	Chain.head = Chain.head.Next
+	Chain.head = temp.Next
 	temp = nil
 	Chain.Length--
 }
@@ -85,4 +79,17 @@ func (Chain *Chain[T]) Iter(process func(*Link[T]) bool) {
 		recur(Link.Next)
 	}
 	recur(Chain.head)
+}
+
+func (Chain *Chain[T]) Attach(link *Link[T]) {
+	Chain.tail.Next = link
+	Chain.tail = link
+	Chain.Length++
+}
+
+func (Chain *Chain[T]) Merge(exChain *Chain[T]) *Chain[T] {
+	Chain.tail.Next = exChain.head
+	Chain.tail = exChain.tail
+	Chain.Length += exChain.Length
+	return Chain
 }

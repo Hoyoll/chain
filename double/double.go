@@ -26,6 +26,8 @@ func (link *Link[T]) Delete() {
 func (link *Link[T]) Detach() {
 	link.Front.Next = link.Next
 	link.Next.Front = link.Front
+	link.Front = nil
+	link.Next = nil
 }
 
 // We keep track of the pointer here

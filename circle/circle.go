@@ -200,9 +200,14 @@ func (Chain *Chain[T]) Merge(exChain *Chain[T]) *Chain[T] {
 }
 
 func (Chain *Chain[T]) Attach(link *Link[T]) {
-	Chain.tail.Next = link
-	link.Front = Chain.tail
-	Chain.tail = link
+	if Chain.tail == nil || Chain.head == nil {
+		Chain.head = link
+		Chain.tail = link
+	} else {
+		Chain.tail.Next = link
+		link.Front = Chain.tail
+		Chain.tail = link
+	}
 	Chain.Circle()
 	Chain.Length++
 }
